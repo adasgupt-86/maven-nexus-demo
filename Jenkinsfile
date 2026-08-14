@@ -10,6 +10,24 @@ pipeline {
             }
         }
 
+        stage('Environment Check') {
+            steps {
+                sh '''
+                    echo "Java:"
+                    java -version
+
+                    echo "Maven:"
+                    mvn -version
+
+                    echo "Docker:"
+                    docker --version
+
+                    echo "Kubernetes:"
+                    kubectl version --client
+                '''
+            }
+        }
+
         stage('Test') {
             steps {
                 sh 'mvn clean test'
@@ -21,7 +39,8 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
                         mvn sonar:sonar \
-                          -Dsonar.projectKey=maven-nexus-demo
+                          -Dsonar.projectKey=maven-nexus-demo \
+                          -Dsonar.projectName=maven-nexus-demo
                     '''
                 }
             }
@@ -62,7 +81,7 @@ pipeline {
             }
         }
 
-        stage('Deploy Kubernetes') {
+        stage('Deploy to Kubernetes') {
             steps {
                 sh '''
                     kubectl -n maven-demo set image \
@@ -70,28 +89,45 @@ pipeline {
                       maven-nexus-demo=192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}
 
                     kubectl -n maven-demo rollout status \
-                      deployment/maven-nexus-demo
+                      deployment/maven-nexus-demo \
+                      --timeout=120s
                 '''
             }
         }
 
-        stage('Verify') {
+        stage('Verify Deployment') {
             steps {
                 sh '''
+                    echo "=== Pods ==="
                     kubectl get pods -n maven-demo -o wide
-                    kubectl get svc -n maven-demo
+
+                    echo "=== Deployment ==="
+                    kubectl get deployment maven-nexus-demo \
+                      -n maven-demo
+
+                    echo "=== Service ==="
+                    kubectl get svc maven-nexus-demo \
+                      -n maven-demo
                 '''
             }
         }
     }
 
     post {
+
         success {
-            echo 'CI/CD deployment completed successfully'
+            echo "CI/CD deployment completed successfully."
+            echo "Docker image: 192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}"
         }
 
         failure {
-            echo 'CI/CD pipeline failed'
+            echo "CI/CD pipeline failed."
+        }
+
+        always {
+            archiveArtifacts artifacts: 'target/*.jar',
+                             fingerprint: true,
+                             allowEmptyArchive: true
         }
     }
 }
