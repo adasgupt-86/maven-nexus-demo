@@ -2,20 +2,7 @@ pipeline {
 
     agent any
 
-    environment {
-        NEXUS_URL = 'http://192.168.2.142:8081'
-    }
-
     stages {
-
-        stage('Environment Check') {
-            steps {
-                sh '''
-                    java -version
-                    mvn -version
-                '''
-            }
-        }
 
         stage('Checkout') {
             steps {
@@ -29,70 +16,82 @@ pipeline {
             }
         }
 
+        stage('SonarQube') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=maven-nexus-demo
+                    '''
+                }
+            }
+        }
+
         stage('Package') {
             steps {
                 sh 'mvn package -DskipTests'
             }
         }
 
-        stage('SonarQube') {
+        stage('Docker Build') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                    mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-                        -Dsonar.projectKey=maven-nexus-demo \
-                        -Dsonar.projectName=maven-nexus-demo
-                    '''
-                }
+                sh '''
+                    docker build \
+                      -t 192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER} .
+                '''
             }
         }
 
-        stage('Deploy to Nexus') {
+        stage('Trivy Scan') {
             steps {
+                sh '''
+                    trivy image \
+                      --exit-code 1 \
+                      --severity HIGH,CRITICAL \
+                      192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}
+                '''
+            }
+        }
 
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'nexus-credentials',
-                        usernameVariable: 'NEXUS_USERNAME',
-                        passwordVariable: 'NEXUS_PASSWORD'
-                    )
-                ]) {
+        stage('Push Image') {
+            steps {
+                sh '''
+                    docker push \
+                      192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}
+                '''
+            }
+        }
 
-                    sh '''
-                        cat > settings.xml <<EOF
-<settings>
-    <servers>
-        <server>
-            <id>nexus-releases</id>
-            <username>${NEXUS_USERNAME}</username>
-            <password>${NEXUS_PASSWORD}</password>
-        </server>
-    </servers>
-</settings>
-EOF
+        stage('Deploy Kubernetes') {
+            steps {
+                sh '''
+                    kubectl -n maven-demo set image \
+                      deployment/maven-nexus-demo \
+                      maven-nexus-demo=192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}
 
-                        mvn deploy \
-                          -DskipTests \
-                          -s settings.xml
-                    '''
-                }
+                    kubectl -n maven-demo rollout status \
+                      deployment/maven-nexus-demo
+                '''
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                sh '''
+                    kubectl get pods -n maven-demo -o wide
+                    kubectl get svc -n maven-demo
+                '''
             }
         }
     }
 
     post {
-
         success {
-            echo 'CI/CD pipeline completed successfully'
+            echo 'CI/CD deployment completed successfully'
         }
 
         failure {
             echo 'CI/CD pipeline failed'
-        }
-
-        always {
-            archiveArtifacts artifacts: 'target/*.jar',
-                             fingerprint: true
         }
     }
 }
