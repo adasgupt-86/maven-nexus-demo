@@ -2,6 +2,10 @@ pipeline {
 
     agent any
 
+    environment {
+        KUBECONFIG = '/var/jenkins-kube/config'
+    }
+
     stages {
 
         stage('Checkout') {
