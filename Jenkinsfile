@@ -2,16 +2,20 @@ pipeline {
 
     agent any
 
-    tools {
-        maven 'Maven'
-        jdk 'JDK21'
-    }
-
     environment {
         NEXUS_URL = 'http://192.168.2.142:8081'
     }
 
     stages {
+
+        stage('Environment Check') {
+            steps {
+                sh '''
+                    java -version
+                    mvn -version
+                '''
+            }
+        }
 
         stage('Checkout') {
             steps {
@@ -36,8 +40,8 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
                         mvn sonar:sonar \
-                        -Dsonar.projectKey=maven-nexus-demo \
-                        -Dsonar.projectName=maven-nexus-demo
+                          -Dsonar.projectKey=maven-nexus-demo \
+                          -Dsonar.projectName=maven-nexus-demo
                     '''
                 }
             }
@@ -56,16 +60,16 @@ pipeline {
 
                     sh '''
                         cat > settings.xml <<EOF
-                        <settings>
-                          <servers>
-                            <server>
-                              <id>nexus-releases</id>
-                              <username>${NEXUS_USERNAME}</username>
-                              <password>${NEXUS_PASSWORD}</password>
-                            </server>
-                          </servers>
-                        </settings>
-                        EOF
+<settings>
+    <servers>
+        <server>
+            <id>nexus-releases</id>
+            <username>${NEXUS_USERNAME}</username>
+            <password>${NEXUS_PASSWORD}</password>
+        </server>
+    </servers>
+</settings>
+EOF
 
                         mvn deploy \
                           -DskipTests \
@@ -77,6 +81,7 @@ pipeline {
     }
 
     post {
+
         success {
             echo 'CI/CD pipeline completed successfully'
         }
