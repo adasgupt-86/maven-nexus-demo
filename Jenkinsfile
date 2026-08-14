@@ -89,13 +89,13 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                    kubectl -n maven-demo set image \
-                      deployment/maven-nexus-demo \
-                      maven-nexus-demo=192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
 
-                    kubectl -n maven-demo rollout status \
-                      deployment/maven-nexus-demo \
-                      --timeout=120s
+                    kubectl -n maven-demo set image deployment/maven-nexus-demo \
+                    maven-nexus-demo=192.168.2.143:5000/maven-nexus-demo:${BUILD_NUMBER}
+
+                    kubectl -n maven-demo rollout status deployment/maven-nexus-demo
                 '''
             }
         }
