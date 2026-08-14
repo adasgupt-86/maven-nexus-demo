@@ -28,7 +28,7 @@ spec:
       containers:
         - name: maven-nexus-demo
 
-          image: 192.168.2.143:5000/maven-nexus-demo:latest
+          image: 192.168.2.143:5000/maven-nexus-demo:${IMAGE}
 
           ports:
             - containerPort: 8080
