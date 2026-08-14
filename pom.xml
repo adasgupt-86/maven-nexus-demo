@@ -2,29 +2,55 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="
+            http://maven.apache.org/POM/4.0.0
+            https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Project coordinates -->
     <groupId>com.example</groupId>
-
     <artifactId>maven-nexus-demo</artifactId>
-
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <packaging>jar</packaging>
 
     <name>Maven Nexus Demo</name>
+    <description>Demo Maven application for Jenkins and Nexus CI/CD</description>
 
+    <!-- Java version -->
     <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
     </properties>
+
+    <!--
+        Nexus repository configuration.
+
+        Maven deploy uses these repository IDs to determine
+        where release and snapshot artifacts should be uploaded.
+    -->
+    <distributionManagement>
+
+        <!-- Release artifacts -->
+        <repository>
+            <id>nexus-releases</id>
+            <name>Nexus Releases</name>
+            <url>http://192.168.2.142:8081/repository/maven-releases/</url>
+        </repository>
+
+        <!-- Snapshot artifacts -->
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <name>Nexus Snapshots</name>
+            <url>http://192.168.2.142:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
+
+    </distributionManagement>
 
     <dependencies>
 
+        <!-- JUnit 5 -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -38,16 +64,35 @@
 
         <plugins>
 
+            <!-- Compiler -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <release>21</release>
+                </configuration>
+            </plugin>
+
+            <!-- Unit tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.3</version>
             </plugin>
 
+            <!-- JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.14.0</version>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.5.0</version>
+            </plugin>
+
+            <!-- Deploy -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-deploy-plugin</artifactId>
+                <version>3.1.4</version>
             </plugin>
 
         </plugins>
