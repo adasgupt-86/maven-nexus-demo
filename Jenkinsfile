@@ -39,9 +39,9 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh '''
-                        mvn sonar:sonar \
-                          -Dsonar.projectKey=maven-nexus-demo \
-                          -Dsonar.projectName=maven-nexus-demo
+                    mvn org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+                        -Dsonar.projectKey=maven-nexus-demo \
+                        -Dsonar.projectName=maven-nexus-demo
                     '''
                 }
             }
